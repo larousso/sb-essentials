@@ -1,9 +1,10 @@
 package org.reactivecouchbase.sbessentials.libs.ws;
 
-import akka.actor.ActorSystem;
 import akka.http.javadsl.model.HttpHeader;
 import akka.http.javadsl.model.HttpResponse;
 import akka.stream.ActorMaterializer;
+import akka.stream.javadsl.AsPublisher;
+import akka.stream.javadsl.Sink;
 import akka.stream.javadsl.Source;
 import akka.util.ByteString;
 import javaslang.collection.HashMap;
@@ -11,6 +12,9 @@ import javaslang.collection.List;
 import javaslang.collection.Map;
 import org.reactivecouchbase.concurrent.Future;
 import org.reactivecouchbase.functional.Option;
+import org.reactivestreams.Publisher;
+
+import java.util.concurrent.ExecutorService;
 
 public class WSResponse {
 
@@ -46,15 +50,23 @@ public class WSResponse {
     }
 
     public Future<WSBody> body() {
-        // ActorMaterializer materializer = ActorMaterializer.create(WS.webApplicationContext.getBean(ActorSystem.class));
-        ActorMaterializer materializer = WS.webApplicationContext.getBean(ActorMaterializer.class);
+        return body(WS.executor());
+    }
+
+    public Future<WSBody> body(ExecutorService ec) {
+        ActorMaterializer materializer = WS.materializer();
         Source<ByteString, ?> source = underlying.entity().getDataBytes();
         return Future.fromJdkCompletableFuture(
                 source.runFold(ByteString.empty(), ByteString::concat, materializer).toCompletableFuture()
-        ).map(WSBody::new);
+        ).map(WSBody::new, ec);
     }
 
     public Source<ByteString, ?> bodyAsStream() {
         return underlying.entity().getDataBytes();
+    }
+
+    public Publisher<ByteString> bodyAsPublisher(AsPublisher asPublisher) {
+        ActorMaterializer materializer = WS.materializer();
+        return underlying.entity().getDataBytes().runWith(Sink.asPublisher(asPublisher), materializer);
     }
 }

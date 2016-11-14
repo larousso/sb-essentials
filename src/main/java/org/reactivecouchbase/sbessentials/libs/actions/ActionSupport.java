@@ -1,4 +1,4 @@
-package org.reactivecouchbase.sbessentials.libs.future;
+package org.reactivecouchbase.sbessentials.libs.actions;
 
 import akka.Done;
 import akka.japi.Pair;
@@ -8,10 +8,7 @@ import akka.stream.javadsl.Sink;
 import akka.stream.javadsl.Source;
 import akka.util.ByteString;
 import javaslang.collection.List;
-import org.reactivecouchbase.concurrent.Future;
 import org.reactivecouchbase.sbessentials.libs.result.Result;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -29,13 +26,13 @@ import javax.servlet.http.HttpServletResponse;
 import java.util.Map;
 import java.util.concurrent.CompletionStage;
 
-public class FutureSupport {
+public class ActionSupport {
 
-    public static class FutureReturnValueHandler implements AsyncHandlerMethodReturnValueHandler {
+    public static class ActionReturnValueHandler implements AsyncHandlerMethodReturnValueHandler {
 
         private final ActorMaterializer materializer;
 
-        public FutureReturnValueHandler(ActorMaterializer materializer) {
+        public ActionReturnValueHandler(ActorMaterializer materializer) {
             this.materializer = materializer;
         }
 
@@ -46,8 +43,7 @@ public class FutureSupport {
 
         @Override
         public boolean supportsReturnType(MethodParameter returnType) {
-            return Future.class.isAssignableFrom(returnType.getParameterType())
-                    && returnType.getGenericParameterType().toString().equalsIgnoreCase(Future.class.getName() + "<" + Result.class.getName()+ ">");
+            return Action.class.isAssignableFrom(returnType.getParameterType());
         }
 
         @SuppressWarnings("unchecked")
@@ -57,23 +53,22 @@ public class FutureSupport {
                 mavContainer.setRequestHandled(true);
                 return;
             }
-            final Future<Result> future = Future.class.cast(returnValue);
+            final Action action = Action.class.cast(returnValue);
             final HttpServletResponse response = (HttpServletResponse) webRequest.getNativeResponse();
             WebAsyncUtils.getAsyncManager(webRequest)
-                 .startDeferredResultProcessing(
-                        new FutureDeferredResult(future, response, materializer), mavContainer);
+                    .startDeferredResultProcessing(
+                            new ActionDeferredResult(action, response, materializer), mavContainer);
         }
     }
 
-    public static class FutureDeferredResult extends DeferredResult<ResponseBodyEmitter> {
+    static class ActionDeferredResult extends DeferredResult<ResponseBodyEmitter> {
 
-        private static final Logger logger = LoggerFactory.getLogger(FutureDeferredResult.class);
-
-        public FutureDeferredResult(Future<Result> future, HttpServletResponse response, ActorMaterializer materializer) {
+        public ActionDeferredResult(Action action, HttpServletResponse response, ActorMaterializer materializer) {
             super(null, new Object());
-            Assert.notNull(future, "Future cannot be null");
-            future.andThen(ttry -> {
+            Assert.notNull(action, "Action cannot be null");
+            action.run().andThen(ttry -> {
                 for (Result result : ttry.asSuccess()) {
+
                     result.cookies.forEach(response::addCookie);
                     SourceResponseBodyEmmitter rbe = new SourceResponseBodyEmmitter(result);
                     this.setResult(rbe);
@@ -96,7 +91,7 @@ public class FutureSupport {
                 for (Throwable t : ttry.asFailure()) {
                     this.setErrorResult(t);
                 }
-            });
+            }, action.ec);
         }
     }
 
@@ -115,17 +110,15 @@ public class FutureSupport {
             HttpHeaders headers = response.getHeaders();
             for (Map.Entry<String, List<String>> entry : result.headers.toJavaMap().entrySet()) {
                 for (String value : entry.getValue()) {
-                    // System.out.println("sent header : " + entry.getKey() + " :: " + value);
                     headers.add(entry.getKey(), value);
                 }
             }
             response.setStatusCode(HttpStatus.valueOf(result.status));
             headers.setContentType(MediaType.valueOf(result.contentType));
             headers.add("X-Content-Type", result.contentType);
-            headers.add("Transfer-Encoding", "chunked");
-
+            headers.add("Content-Type", result.contentType);
+            // it seems to appear in double
+            headers.add("X-Transfer-Encoding", "chunked");
         }
-
     }
-
 }

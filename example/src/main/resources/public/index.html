@@ -1,0 +1,14 @@
+<html>
+
+
+    <body>
+
+    </body>
+    <script type="application/javascript">
+        var exampleSocket = new WebSocket("ws://localhost:8080/api/websocket/toto");
+        exampleSocket.onmessage = function (event) {
+            console.log(event.data);
+            exampleSocket.send("yo!")
+        }
+    </script>
+</html>

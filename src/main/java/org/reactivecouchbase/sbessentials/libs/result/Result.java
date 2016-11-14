@@ -7,8 +7,6 @@ import akka.util.ByteString;
 import com.github.jknack.handlebars.Context;
 import com.github.jknack.handlebars.Handlebars;
 import com.github.jknack.handlebars.Template;
-import com.github.jknack.handlebars.io.ClassPathTemplateLoader;
-import com.github.jknack.handlebars.io.TemplateLoader;
 import com.google.common.io.Files;
 import javaslang.collection.HashMap;
 import javaslang.collection.HashSet;
@@ -19,6 +17,7 @@ import org.reactivecouchbase.concurrent.Future;
 import org.reactivecouchbase.concurrent.Promise;
 import org.reactivecouchbase.json.JsValue;
 import org.reactivecouchbase.json.Json;
+import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
@@ -135,6 +134,10 @@ public class Result {
         return Result.copy(this).withSource(source).build();
     }
 
+    public Result withBody(Publisher<ByteString> source) {
+        return Result.copy(this).withSource(Source.fromPublisher(source)).build();
+    }
+
     public Result text(String text) {
         Source<ByteString, ?> source = StreamConverters.fromInputStream(() -> new ByteArrayInputStream(text.getBytes(StandardCharsets.UTF_8)));
         return Result.copy(this)
@@ -208,6 +211,10 @@ public class Result {
                 .build();
     }
 
+    public Result binary(Publisher<ByteString> bytes) {
+        return binary(Source.fromPublisher(bytes));
+    }
+
     public Result binary(Source<ByteString, ?> bytes) {
         return Result.copy(this)
                 .withSource(bytes)
@@ -258,16 +265,16 @@ public class Result {
         }
     }
 
-    //public Result template(String name, Map<String, Object> params) {
-    //    org.thymeleaf.context.Context context = new org.thymeleaf.context.Context();
-    //    org.thymeleaf.TemplateEngine templateEngine = Results.webApplicationContext.getBean(org.thymeleaf.TemplateEngine.class);
-    //    params.forEach(tuple -> context.setVariable(tuple._1, tuple._2));
-    //    String body = templateEngine.process(name, context);
-    //    return html(body);
-    //}
+    public Result chunked(Publisher<ByteString> theStream) {
+        return chunked(Source.fromPublisher(theStream));
+    }
 
     public Result chunked(Source<ByteString, ?> theStream) {
         return Result.copy(this).withSource(theStream).build();
+    }
+
+    public Result stream(Publisher<String> stream) {
+        return stream(Source.fromPublisher(stream));
     }
 
     public Result stream(Source<String, ?> stream) {
@@ -284,14 +291,14 @@ public class Result {
 
     public String toString() {
         return "Result { "
-                + status
-                + ", "
-                + contentType
-                + ", [ "
-                + headers.mkString(", ")
-                + " ], "
-                + source
-                + " }";
+            + status
+            + ", "
+            + contentType
+            + ", [ "
+            + headers.mkString(", ")
+            + " ], "
+            + source
+            + " }";
     }
 
     public static final class Builder {
@@ -311,6 +318,11 @@ public class Result {
 
         public Builder withSource(Source<ByteString, ?> val) {
             source = val;
+            return this;
+        }
+
+        public Builder withSource(Publisher<ByteString> val) {
+            source = Source.fromPublisher(val);
             return this;
         }
 

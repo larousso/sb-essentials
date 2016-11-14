@@ -20,9 +20,10 @@ import org.reactivecouchbase.functional.Tuple;
 import org.reactivecouchbase.json.JsObject;
 import org.reactivecouchbase.json.JsValue;
 import org.reactivecouchbase.json.Json;
-import org.reactivecouchbase.sbessentials.config.Config;
+import org.reactivecouchbase.sbessentials.config.SBEssentialsConfig;
 import org.reactivecouchbase.sbessentials.libs.actions.Action;
-import org.reactivecouchbase.sbessentials.libs.actions.Actions;
+import org.reactivecouchbase.sbessentials.libs.actions.ActionStep;
+import org.reactivecouchbase.sbessentials.libs.actions.ActionsHelperInternal;
 import org.reactivecouchbase.sbessentials.libs.result.Result;
 import org.reactivecouchbase.sbessentials.libs.result.Results;
 import org.reactivecouchbase.sbessentials.libs.ws.WS;
@@ -54,7 +55,7 @@ import static org.reactivecouchbase.sbessentials.libs.result.Results.Ok;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
-@ContextConfiguration(classes = { BasicResultsTest.Application.class, Config.class, BasicResultsTest.TestController.class })
+@ContextConfiguration(classes = { BasicResultsTest.Application.class, SBEssentialsConfig.class, BasicResultsTest.TestController.class })
 public class BasicResultsTest {
 
     private static final Logger logger = LoggerFactory.getLogger(BasicResultsTest.class);
@@ -63,7 +64,7 @@ public class BasicResultsTest {
 
     @Before
     public void injectStaticStuff() {
-        new Actions().setWebApplicationContext(ctx);
+        new ActionsHelperInternal().setWebApplicationContext(ctx);
         new Results().setWebApplicationContext(ctx);
         new WS().setWebApplicationContext(ctx);
     }
@@ -93,7 +94,7 @@ public class BasicResultsTest {
         Tuple<String, Map<String, List<String>>> body = Await.result(fuBody, MAX_AWAIT);
         Assert.assertEquals("Hello World!\n", body._1);
         Assert.assertEquals("text/plain", body._2.get("X-Content-Type").flatMap(Traversable::headOption).getOrElse("none"));
-        Assert.assertEquals("chunked", body._2.get("Transfer-Encoding").flatMap(Traversable::headOption).getOrElse("none"));
+        Assert.assertEquals("chunked", body._2.get("X-Transfer-Encoding").flatMap(Traversable::headOption).getOrElse("none"));
     }
 
     @Test
@@ -111,11 +112,12 @@ public class BasicResultsTest {
         Tuple<String, Map<String, List<String>>> body = Await.result(fuBody, MAX_AWAIT);
         Assert.assertEquals(TestController.VERY_HUGE_TEXT + "\n", body._1);
         Assert.assertEquals("text/plain", body._2.get("X-Content-Type").flatMap(Traversable::headOption).getOrElse("none"));
-        Assert.assertEquals("chunked", body._2.get("Transfer-Encoding").flatMap(Traversable::headOption).getOrElse("none"));
+        Assert.assertEquals("chunked", body._2.get("X-Transfer-Encoding").flatMap(Traversable::headOption).getOrElse("none"));
     }
 
     @Test
     public void testJsonResult() throws Exception {
+        // Thread.sleep(Duration.of("10min").toMillis());
         Future<Tuple<JsValue, Map<String, List<String>>>> fuBody = WS.host("http://localhost:7001")
             .withPath("/tests/json")
             .withHeader("Api-Key", "12345")
@@ -129,7 +131,7 @@ public class BasicResultsTest {
         Tuple<JsValue, Map<String, List<String>>> body = Await.result(fuBody, MAX_AWAIT);
         Assert.assertEquals(Json.obj().with("message", "Hello World!"), body._1);
         Assert.assertEquals("application/json", body._2.get("X-Content-Type").flatMap(Traversable::headOption).getOrElse("none"));
-        Assert.assertEquals("chunked", body._2.get("Transfer-Encoding").flatMap(Traversable::headOption).getOrElse("none"));
+        Assert.assertEquals("chunked", body._2.get("X-Transfer-Encoding").flatMap(Traversable::headOption).getOrElse("none"));
     }
 
     @Test
@@ -153,7 +155,7 @@ public class BasicResultsTest {
         Assert.assertTrue(jsonBody.exists("city"));
         Assert.assertTrue(jsonBody.exists("country_name"));
         Assert.assertEquals("application/json", body._2.get("X-Content-Type").flatMap(Traversable::headOption).getOrElse("none"));
-        Assert.assertEquals("chunked", body._2.get("Transfer-Encoding").flatMap(Traversable::headOption).getOrElse("none"));
+        Assert.assertEquals("chunked", body._2.get("X-Transfer-Encoding").flatMap(Traversable::headOption).getOrElse("none"));
     }
 
     @Test
@@ -176,7 +178,7 @@ public class BasicResultsTest {
         Assert.assertTrue(jsonBody.exists("city"));
         Assert.assertTrue(jsonBody.exists("country_name"));
         Assert.assertEquals("application/json", body._2.get("X-Content-Type").flatMap(Traversable::headOption).getOrElse("none"));
-        Assert.assertEquals("chunked", body._2.get("Transfer-Encoding").flatMap(Traversable::headOption).getOrElse("none"));
+        Assert.assertEquals("chunked", body._2.get("X-Transfer-Encoding").flatMap(Traversable::headOption).getOrElse("none"));
     }
 
     @Test
@@ -197,7 +199,7 @@ public class BasicResultsTest {
         Tuple<JsValue, Map<String, List<String>>> body = Await.result(fuBody, MAX_AWAIT);
         Assert.assertEquals(Json.obj().with("uuid", uuid).with("processed_by", "SB"), body._1);
         Assert.assertEquals("application/json", body._2.get("X-Content-Type").flatMap(Traversable::headOption).getOrElse("none"));
-        Assert.assertEquals("chunked", body._2.get("Transfer-Encoding").flatMap(Traversable::headOption).getOrElse("none"));
+        Assert.assertEquals("chunked", body._2.get("X-Transfer-Encoding").flatMap(Traversable::headOption).getOrElse("none"));
     }
 
     @Test
@@ -215,7 +217,7 @@ public class BasicResultsTest {
         Tuple<String, Map<String, List<String>>> body = Await.result(fuBody, MAX_AWAIT);
         Assert.assertEquals("<h1>Hello World!</h1>", body._1);
         Assert.assertEquals("text/html", body._2.get("X-Content-Type").flatMap(Traversable::headOption).getOrElse("none"));
-        Assert.assertEquals("chunked", body._2.get("Transfer-Encoding").flatMap(Traversable::headOption).getOrElse("none"));
+        Assert.assertEquals("chunked", body._2.get("X-Transfer-Encoding").flatMap(Traversable::headOption).getOrElse("none"));
     }
 
     @Test
@@ -233,7 +235,7 @@ public class BasicResultsTest {
         Tuple<String, Map<String, List<String>>> body = Await.result(fuBody, MAX_AWAIT);
         Assert.assertEquals("<div><h1>Hello Mathieu!</h1></div>", body._1);
         Assert.assertEquals("text/html", body._2.get("X-Content-Type").flatMap(Traversable::headOption).getOrElse("none"));
-        Assert.assertEquals("chunked", body._2.get("Transfer-Encoding").flatMap(Traversable::headOption).getOrElse("none"));
+        Assert.assertEquals("chunked", body._2.get("X-Transfer-Encoding").flatMap(Traversable::headOption).getOrElse("none"));
     }
 
     @Test
@@ -261,7 +263,7 @@ public class BasicResultsTest {
         }
         Assert.assertTrue(parts.size() < 7);
         Assert.assertEquals("text/event-stream", body._2.get("X-Content-Type").flatMap(Traversable::headOption).getOrElse("none"));
-        Assert.assertEquals("chunked", body._2.get("Transfer-Encoding").flatMap(Traversable::headOption).getOrElse("none"));
+        Assert.assertEquals("chunked", body._2.get("X-Transfer-Encoding").flatMap(Traversable::headOption).getOrElse("none"));
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -275,39 +277,38 @@ public class BasicResultsTest {
 
         private final static Logger logger = LoggerFactory.getLogger(TestController.class);
 
-        @Autowired
-        ActorSystem actorSystem;
+        @Autowired ActorSystem actorSystem;
 
-        private static Action ApiKeyCheck = (req, block) -> req.header("Api-Key").fold(
-                () -> {
-                    logger.info("No API KEY provided");
-                    return Future.successful(BadRequest.json(Json.obj().with("error", "No API KEY provided")));
-                },
-                (value) -> {
-                    if (value.equalsIgnoreCase("12345")) {
-                        return block.apply(req);
-                    } else {
-                        logger.info("Bad API KEY provided {}", value);
-                        return Future.successful(BadRequest.json(Json.obj().with("error", "Bad API KEY")));
-                    }
+        private static ActionStep ApiKeyCheck = (req, block) -> req.header("Api-Key").orElse(req.queryParam("Api-Key")).fold(
+            () -> {
+                logger.info("No API KEY provided");
+                return Future.successful(BadRequest.json(Json.obj().with("error", "No API KEY provided")));
+            },
+            (value) -> {
+                if (value.equalsIgnoreCase("12345")) {
+                    return block.apply(req);
+                } else {
+                    logger.info("Bad API KEY provided {}", value);
+                    return Future.successful(BadRequest.json(Json.obj().with("error", "Bad API KEY")));
                 }
+            }
         );
 
-        private static Action LogBefore = (req, block) -> {
+        private static ActionStep LogBefore = (req, block) -> {
             Long start = System.currentTimeMillis();
             logger.info("[Log] before action -> {}", req.getRequest().getRequestURI());
             return block.apply(req.setValue("start", start));
         };
 
-        private static Action LogAfter = (req, block) -> block.apply(req).andThen(ttry -> {
+        private static ActionStep LogAfter = (req, block) -> block.apply(req).andThen(ttry -> {
             logger.info(
                     "[Log] after action -> {} : took {}",
                     req.getRequest().getRequestURI(),
                     Duration.of(System.currentTimeMillis() - req.getValue("start", Long.class), TimeUnit.MILLISECONDS).toHumanReadable()
-            );
+            , req.currentExecutor());
         });
 
-        private static Action Throttle(int limit, long perMillis) {
+        private static ActionStep Throttle(int limit, long perMillis) {
             AtomicLong next = new AtomicLong(System.currentTimeMillis());
             AtomicLong counter = new AtomicLong(0L);
             return (request, block) -> {
@@ -324,19 +325,19 @@ public class BasicResultsTest {
             };
         }
 
-        private static Action ApiManagedAction = LogBefore
+        private static ActionStep ApiManagedAction = LogBefore
                 .andThen(ApiKeyCheck)
                 .andThen(Throttle(2, 100))
                 .andThen(LogAfter);
 
         @RequestMapping(method = RequestMethod.GET, path = "/sse")
-        public Future<Result> testStream() {
-            return Actions.sync(ctx -> {
+        public Action testStream() {
+            return Action.sync(ctx -> {
 
                 Result result = Ok.stream(
                     Source.tick(
                         FiniteDuration.apply(0, TimeUnit.MILLISECONDS),
-                        FiniteDuration.apply(1, TimeUnit.SECONDS),
+                        FiniteDuration.apply(100, TimeUnit.MILLISECONDS),
                         ""
                     )
                     .map(l -> Json.obj().with("time", System.currentTimeMillis()).with("value", l))
@@ -347,7 +348,7 @@ public class BasicResultsTest {
                 result.materializedValue(Cancellable.class).andThen(ttry -> {
                     for (Cancellable c : ttry.asSuccess()) {
                         after(
-                                FiniteDuration.create(5, TimeUnit.SECONDS),
+                                FiniteDuration.create(500, TimeUnit.MILLISECONDS),
                                 actorSystem.scheduler(),
                                 actorSystem.dispatcher(),
                                 CompletableFuture.completedFuture(Done.getInstance())
@@ -362,42 +363,42 @@ public class BasicResultsTest {
         }
 
         @GetMapping("/text")
-        public Future<Result> text() {
-            return Actions.sync(ctx ->
+        public Action text() {
+            return Action.sync(ctx ->
                 Ok.text("Hello World!\n")
             );
         }
 
         @GetMapping("/huge")
-        public Future<Result> hugeText() {
+        public Action hugeText() {
             return ApiManagedAction.sync(ctx ->
                 Ok.text(VERY_HUGE_TEXT + "\n")
             );
         }
 
         @GetMapping("/json")
-        public Future<Result> json() {
+        public Action json() {
             return ApiManagedAction.sync(ctx ->
                 Ok.json(Json.obj().with("message", "Hello World!"))
             );
         }
 
         @GetMapping("/html")
-        public Future<Result> html() {
+        public Action html() {
             return ApiManagedAction.sync(ctx ->
                 Ok.html("<h1>Hello World!</h1>")
             );
         }
 
         @GetMapping("/template")
-        public Future<Result> template() {
+        public Action template() {
             return ApiManagedAction.sync(ctx ->
                 Ok.template("hello", HashMap.<String, String>empty().put("name", "Mathieu"))
             );
         }
 
         @PostMapping("/post")
-        public Future<Result> testPost() {
+        public Action testPost() {
             return ApiManagedAction.async(ctx ->
                 ctx.body()
                     .map(body -> body.asJson().asObject())
@@ -407,7 +408,7 @@ public class BasicResultsTest {
         }
 
         @GetMapping("/ws")
-        public Future<Result> testWS() {
+        public Action testWS() {
             return ApiManagedAction.async(ctx ->
                 WS.host("http://freegeoip.net").withPath("/json/")
                     .call()
@@ -418,7 +419,7 @@ public class BasicResultsTest {
         }
 
         @GetMapping("/ws2")
-        public Future<Result> testWS2() {
+        public Action testWS2() {
             return ApiManagedAction.async(ctx ->
                 WS.host("http://freegeoip.net")
                     .withPath("/json/")
@@ -431,10 +432,11 @@ public class BasicResultsTest {
         }
 
         @GetMapping("/download")
-        public Future<Result> testBigDownload() {
-            return Actions.async(ctx ->
+        public Action testBigDownload() {
+            return Action.async(ctx ->
                 WS.host("http://releases.ubuntu.com")
-                    .withPath("/16.04.1/ubuntu-16.04.1-desktop-amd64.iso")
+                    .addPathSegment("16.04.1")
+                    .addPathSegment("ubuntu-16.04.1-desktop-amd64.iso")
                     .withHeader("From", "SB")
                     .call()
                     .map(r -> Ok.chunked(r.bodyAsStream()).as("application/octet-stream"))
@@ -442,8 +444,8 @@ public class BasicResultsTest {
         }
 
         @GetMapping("/bad")
-        public Future<Result> testBigBadDownload() {
-            return Actions.async(ctx ->
+        public Action testBigBadDownload() {
+            return Action.async(ctx ->
                 WS.host("http://releases.ubuntu.com")
                     .withPath("/16.04.1/ubuntu-16.04.1-desktop-amd64.iso")
                     .withHeader("From", "SB")

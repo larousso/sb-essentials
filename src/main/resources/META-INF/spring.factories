@@ -1,4 +1,5 @@
-org.springframework.boot.autoconfigure.EnableAutoConfiguration=org.reactivecouchbase.sbessentials.config.Config,\
-  org.reactivecouchbase.sbessentials.libs.actions.Actions,\
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=org.reactivecouchbase.sbessentials.config.SBEssentialsConfig,\
+  org.reactivecouchbase.sbessentials.libs.actions.ActionsHelperInternal,\
   org.reactivecouchbase.sbessentials.libs.result.Results,\
-  org.reactivecouchbase.sbessentials.libs.ws.WS
+  org.reactivecouchbase.sbessentials.libs.ws.WS,\
+  org.reactivecouchbase.sbessentials.config.WebSocketConfig

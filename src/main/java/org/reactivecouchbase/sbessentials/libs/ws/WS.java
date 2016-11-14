@@ -1,5 +1,6 @@
 package org.reactivecouchbase.sbessentials.libs.ws;
 
+
 import akka.actor.ActorSystem;
 import akka.http.javadsl.Http;
 import akka.http.javadsl.OutgoingConnection;
@@ -15,7 +16,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.context.WebApplicationContext;
 
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
 
 @Component
 public class WS {
@@ -27,21 +28,36 @@ public class WS {
         WS.webApplicationContext = webApplicationContext;
     }
 
+    static ExecutorService executor() {
+        return webApplicationContext.getBean("ws-executor-service", ExecutorService.class);
+    }
+
+    static ActorMaterializer materializer() {
+        return webApplicationContext.getBean("ws-client-actor-materializer", ActorMaterializer.class);
+    }
+
+    static ActorSystem actorSystem() {
+        return webApplicationContext.getBean(ActorSystem.class);
+    }
+
     public static Future<WSResponse> call(String host, HttpRequest request) {
-        ActorSystem system = WS.webApplicationContext.getBean(ActorSystem.class);
-        //ActorMaterializer materializer = ActorMaterializer.create(system);
-        ActorMaterializer materializer = WS.webApplicationContext.getBean(ActorMaterializer.class);
+        return call(host, request, executor());
+    }
+
+    public static Future<WSResponse> call(String host, HttpRequest request, ExecutorService ec) {
+        ActorSystem system = WS.actorSystem();
+        ActorMaterializer materializer = WS.materializer();
         Flow<HttpRequest, HttpResponse, CompletionStage<OutgoingConnection>> connectionFlow =
                 Http.get(system).outgoingConnection(host);
         CompletionStage<HttpResponse> responseFuture =
                 Source.single(request)
                         .via(connectionFlow)
                         .runWith(Sink.<HttpResponse>head(), materializer);
-        return Future.fromJdkCompletableFuture(responseFuture.toCompletableFuture()).map(WSResponse::new);
+        return Future.fromJdkCompletableFuture(responseFuture.toCompletableFuture()).map(WSResponse::new, ec);
     }
 
     public static WSRequest host(String host) {
-        ActorSystem system = WS.webApplicationContext.getBean(ActorSystem.class);
+        ActorSystem system = WS.actorSystem();
         Flow<HttpRequest, HttpResponse, CompletionStage<OutgoingConnection>> connectionFlow =
                 Http.get(system).outgoingConnection(host);
         return new WSRequest(system, connectionFlow, host);
