@@ -9,7 +9,6 @@ import org.reactivecouchbase.sbessentials.libs.websocket.WebSocketMapping;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
 import org.springframework.http.server.ServletServerHttpRequest;
@@ -28,47 +27,41 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Map;
 
-/**
- * Created by adelegue on 13/11/2016.
- */
 @EnableWebSocket
-@Configuration
+@org.springframework.context.annotation.Configuration
 public class WebSocketConfig implements WebSocketConfigurer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(WebSocketConfig.class);
 
-    @Autowired
-    ActorSystem actorSystem;
-
-    @Autowired
-    WebApplicationContext webApplicationContext;
+    @Autowired WebApplicationContext webApplicationContext;
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
+        ActorSystem actorSystem = webApplicationContext.getBean("websocket-actor-system", ActorSystem.class);
         Map<String, Object> beansWithAnnotation = webApplicationContext.getBeansWithAnnotation(Controller.class);
         List.ofAll(beansWithAnnotation.values())
-                .flatMap(o -> List.of(o.getClass().getDeclaredMethods()).map(a -> Tuple.of(o, a)))
-                .filter(m -> m._2().isAnnotationPresent(WebSocketMapping.class))
-                .flatMap(p -> {
-                    Object controller = p._1();
-                    Method method = p._2();
-                    return buildPaths(controller, method).map(path -> {
-                        LOGGER.info("Mapped {} to websocket", path);
-                        try {
-                            Object invoke = method.invoke(controller);
-                            if(invoke instanceof WebSocket) {
-                                return Tuple.of(path, WebSocket.class.cast(invoke));
-                            } else {
-                                throw new RuntimeException("Wrong method signature, expected WebSocket foo() { ... } ");
-                            }
-                        } catch (InvocationTargetException | IllegalAccessException e) {
-                            throw new RuntimeException("Error", e);
+            .flatMap(o -> List.of(o.getClass().getDeclaredMethods()).map(a -> Tuple.of(o, a)))
+            .filter(m -> m._2().isAnnotationPresent(WebSocketMapping.class))
+            .flatMap(p -> {
+                Object controller = p._1();
+                Method method = p._2();
+                return buildPaths(controller, method).map(path -> {
+                    LOGGER.info("Mapped {} to websocket", path);
+                    try {
+                        Object invoke = method.invoke(controller);
+                        if(invoke instanceof WebSocket) {
+                            return Tuple.of(path, WebSocket.class.cast(invoke));
+                        } else {
+                            throw new RuntimeException("Wrong method signature, expected WebSocket foo() { ... } ");
                         }
-                    });
-                })
-                .forEach(p ->
-                        registry.addHandler(new FlowWebSocketHandler(actorSystem, p._2.handler), p._1).addInterceptors(new UriTemplateHandshakeInterceptor())
-                );
+                    } catch (InvocationTargetException | IllegalAccessException e) {
+                        throw new RuntimeException("Error", e);
+                    }
+                });
+            })
+            .forEach(p ->
+                    registry.addHandler(new FlowWebSocketHandler(actorSystem, p._2.handler), p._1).addInterceptors(new UriTemplateHandshakeInterceptor())
+            );
     }
 
     private List<String> buildPaths(Object controller, Method method) {
@@ -116,6 +109,4 @@ public class WebSocketConfig implements WebSocketConfigurer {
                                    Exception exception) {}
 
     }
-
-
 }

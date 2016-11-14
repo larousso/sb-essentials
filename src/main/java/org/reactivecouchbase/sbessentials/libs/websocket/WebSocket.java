@@ -5,9 +5,6 @@ import org.reactivecouchbase.concurrent.Future;
 
 import java.util.function.Function;
 
-/**
- * Created by adelegue on 13/11/2016.
- */
 public class WebSocket {
 
     public final Function<WebSocketContext, Future<Flow<String, String, ?>>> handler;

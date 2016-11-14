@@ -19,6 +19,12 @@
       <scope>runtime</scope>
     </dependency>
     <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-websocket</artifactId>
+      <version>1.4.1.RELEASE</version>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
       <groupId>org.reactivecouchbase</groupId>
       <artifactId>common-lib</artifactId>
       <version>1.0-SNAPSHOT</version>

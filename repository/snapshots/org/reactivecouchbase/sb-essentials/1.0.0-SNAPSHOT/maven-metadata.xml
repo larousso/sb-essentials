@@ -5,16 +5,9 @@
   <version>1.0.0-SNAPSHOT</version>
   <versioning>
     <snapshot>
-<<<<<<< Updated upstream
-      <timestamp>20161114.105205</timestamp>
+      <timestamp>20161114.160128</timestamp>
       <buildNumber>1</buildNumber>
     </snapshot>
-    <lastUpdated>20161114105205</lastUpdated>
-=======
-      <timestamp>20161113.211846</timestamp>
-      <buildNumber>11</buildNumber>
-    </snapshot>
-    <lastUpdated>20161113211846</lastUpdated>
->>>>>>> Stashed changes
+    <lastUpdated>20161114160128</lastUpdated>
   </versioning>
 </metadata>
